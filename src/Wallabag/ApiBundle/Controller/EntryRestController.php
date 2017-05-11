@@ -280,6 +280,10 @@ class EntryRestController extends WallabagRestController
      *          {"name"="tags", "dataType"="string", "required"=false, "format"="tag1,tag2,tag3", "description"="a comma-separated list of tags."},
      *          {"name"="starred", "dataType"="integer", "required"=false, "format"="1 or 0", "description"="entry already starred"},
      *          {"name"="archive", "dataType"="integer", "required"=false, "format"="1 or 0", "description"="entry already archived"},
+     *          {"name"="content", "dataType"="string", "required"=false, "description"="Content of the entry"},
+     *          {"name"="language", "dataType"="string", "required"=false, "description"="Language of the entry"},
+     *          {"name"="preview_picture", "dataType"="string", "required"=false, "description"="Preview picture of the entry"},
+     *          {"name"="published_at", "dataType"="datetime", "format"="YYYY-MM-DDTHH:II:SS+TZ", "required"=false, "description"="Published date of the entry"},
      *       }
      * )
      *
@@ -293,21 +297,34 @@ class EntryRestController extends WallabagRestController
         $title = $request->request->get('title');
         $isArchived = $request->request->get('archive');
         $isStarred = $request->request->get('starred');
+        $content = $request->request->get('content');
+        $language = $request->request->get('language');
+        $picture = $request->request->get('preview_picture');
+        $publishedAt = $request->request->get('published_at');
 
         $entry = $this->get('wallabag_core.entry_repository')->findByUrlAndUserId($url, $this->getUser()->getId());
 
         if (false === $entry) {
-            $entry = $this->get('wallabag_core.content_proxy')->updateEntry(
-                new Entry($this->getUser()),
-                $url
-            );
+            $entry = new Entry($this->getUser());
         }
 
-        if (!is_null($title)) {
-            $entry->setTitle($title);
-        }
+        $entry = $this->get('wallabag_core.content_proxy')->updateEntry(
+            $entry,
+            $url,
+            [
+                'title' => $title,
+                'html' => $content,
+                'url' => $url,
+                'language' => $language,
+                'date' => $publishedAt,
+                // faking the preview picture
+                'open_graph' => [
+                    'og_image' => $picture,
+                ],
+            ]
+        );
 
-        $tags = $request->request->get('tags', '');
+        $tags = $request->request->get('tags', []);
         if (!empty($tags)) {
             $this->get('wallabag_core.content_proxy')->assignTagsToEntry($entry, $tags);
         }

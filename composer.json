@@ -84,7 +84,8 @@
         "javibravo/simpleue": "^1.0",
         "symfony/dom-crawler": "^3.1",
         "friendsofsymfony/jsrouting-bundle": "^1.6",
-        "bdunogier/guzzle-site-authenticator": "dev-master"
+        "bdunogier/guzzle-site-authenticator": "dev-master",
+        "htmlawed/htmlawed": "^1.1.19"
     },
     "require-dev": {
         "doctrine/doctrine-fixtures-bundle": "~2.2",
