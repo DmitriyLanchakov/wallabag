@@ -7,6 +7,7 @@ use Wallabag\CoreBundle\Helper\ContentProxy;
 use Wallabag\CoreBundle\Entity\Entry;
 use Wallabag\CoreBundle\Entity\Tag;
 use Wallabag\UserBundle\Entity\User;
+use Graby\Graby;
 
 class ContentProxyTest extends \PHPUnit_Framework_TestCase
 {
@@ -364,6 +365,60 @@ class ContentProxyTest extends \PHPUnit_Framework_TestCase
 
         $this->assertCount(1, $entry->getTags());
         $this->assertEquals('tag1', $entry->getTags()[0]->getLabel());
+    }
+
+    public function dataForCrazyHtml()
+    {
+        return [
+            'script and comment' => [
+                '<strong>Script inside:</strong> <!--[if gte IE 4]><script>alert(\'lol\');</script><![endif]--><br />',
+                'lol'
+            ],
+            'script' => [
+                '<strong>Script inside:</strong><script>alert(\'lol\');</script>',
+                'script'
+            ],
+        ];
+    }
+
+    /**
+     * @dataProvider dataForCrazyHtml
+     */
+    public function testWithCrazyHtmlContent($html, $escapedString)
+    {
+        $tagger = $this->getTaggerMock();
+        $tagger->expects($this->once())
+            ->method('tag');
+
+        $graby = new Graby();
+
+        $proxy = new ContentProxy($graby, $tagger, $this->getTagRepositoryMock(), $this->getLogger(), $this->fetchingErrorMessage);
+        $entry = $proxy->updateEntry(
+            new Entry(new User()),
+            'http://1.1.1.1',
+            [
+                'html' => $html,
+                'title' => 'this is my title',
+                'url' => 'http://1.1.1.1',
+                'content_type' => 'text/html',
+                'language' => 'fr',
+                'status' => '200',
+                'open_graph' => [
+                    'og_title' => 'my OG title',
+                    'og_description' => 'OG desc',
+                    'og_image' => 'http://3.3.3.3/cover.jpg',
+                ],
+            ]
+        );
+
+        $this->assertEquals('http://1.1.1.1', $entry->getUrl());
+        $this->assertEquals('this is my title', $entry->getTitle());
+        $this->assertNotContains($escapedString, $entry->getContent());
+        $this->assertEquals('http://3.3.3.3/cover.jpg', $entry->getPreviewPicture());
+        $this->assertEquals('text/html', $entry->getMimetype());
+        $this->assertEquals('fr', $entry->getLanguage());
+        $this->assertEquals('200', $entry->getHttpStatus());
+        $this->assertEquals('1.1.1.1', $entry->getDomainName());
     }
 
     private function getTaggerMock()

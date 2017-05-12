@@ -328,7 +328,6 @@ class EntryRestController extends WallabagRestController
             ]
         );
 
-
         if (!empty($tags)) {
             $this->get('wallabag_core.content_proxy')->assignTagsToEntry($entry, $tags);
         }
